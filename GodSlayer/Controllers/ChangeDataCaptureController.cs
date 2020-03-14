@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GodSlayer.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/change-data-capture")]
     [ApiController]
     public class ChangeDataCaptureController : ControllerBase
     {
@@ -16,11 +16,6 @@ namespace GodSlayer.Controllers
             this.changeDataCaptureService = changeDataCaptureService;
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] MessageCreateRequest request)
         {
@@ -34,11 +29,6 @@ namespace GodSlayer.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
         [HttpPut]
         public async Task<IActionResult> Update([FromBody] MessageUpdateRequest request)
         {
@@ -52,17 +42,10 @@ namespace GodSlayer.Controllers
             return Ok();
         }
 
-        /// <summary>
-        /// Deleta um registro parmanentemente.
-        /// </summary>
-        /// <param name="id">Campo identificador do registro.</param>
-        /// <returns>
-        /// 200 - Retorna o id removido para atualizar os logs.
-        /// </returns>
-        [HttpDelete("{resource}/{key}")]
-        public async Task<IActionResult> Delete(string resource, string key)
+        [HttpDelete("{schema}/{table}/{id}")]
+        public async Task<IActionResult> Delete([FromRoute] string schema, [FromRoute] string table, [FromRoute] string id)
         {
-            await changeDataCaptureService.DeleteAsync(resource, key);
+            await changeDataCaptureService.DeleteAsync(schema, table, id);
 
             return Ok();
         }

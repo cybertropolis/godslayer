@@ -4,9 +4,10 @@ namespace GodSlayer.Models
 {
     public class Topic
     {
-        public string Name { get; set; }
-        public short Replicas { get; set; }
-        public short Partitions { get; set; }
-        public Situation Situation { get; set; }
+        public int Id { get; set; }
+        public string Nome { get; set; }
+        public short? Replicas { get; set; }
+        public int? Particoes { get; set; }
+        public Situation Situacao { get; set; }
     }
 }

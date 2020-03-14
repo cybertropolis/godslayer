@@ -2,6 +2,8 @@
 {
     public class Kafka
     {
-        public SchemaRegistry SchemaRegistry { get; set; }
+        public string Host { get; set; }
+        public string SaslUsername { get; set; }
+        public string SaslPassword { get; set; }
     }
 }

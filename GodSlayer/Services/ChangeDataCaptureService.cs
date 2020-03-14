@@ -1,5 +1,6 @@
 ﻿using Confluent.Kafka;
 using GodSlayer.Models;
+using GodSlayer.Models.Enumerators;
 using GodSlayer.Repositories.Interfaces;
 using GodSlayer.Requests;
 using GodSlayer.Services.Interfaces;
@@ -10,11 +11,11 @@ namespace GodSlayer.Services
 {
     public class ChangeDataCaptureService : IChangeDataCaptureService
     {
-        private readonly IOracleMonitorRepository oracleMonitorRepository;
+        private readonly IResourceRepository oracleMonitorRepository;
         private readonly IKafkaAdminClientRepository kafkaAdminClientRepository;
         private readonly IKafkaProducerRepository<string, string> kafkaProducerRepository;
 
-        public ChangeDataCaptureService(IOracleMonitorRepository oracleMonitorRepository,
+        public ChangeDataCaptureService(IResourceRepository oracleMonitorRepository,
                                         IKafkaAdminClientRepository kafkaAdminClientRepository,
                                         IKafkaProducerRepository<string, string> kafkaProducerRepository)
         {
@@ -27,47 +28,68 @@ namespace GodSlayer.Services
         {
             var message = new Message<string, string>
             {
-                Key = request.Key,
+                Key = request.Id,
                 Value = request.Value
             };
 
-            IEnumerable<Resource> resources = await oracleMonitorRepository.ListResourcesByTable(request.Schema, request.Table);
+            IEnumerable<Resource> resources = await oracleMonitorRepository.List(request.Schema, request.Table, Operation.Create);
 
             foreach (Resource resource in resources)
             {
-                if (!await kafkaAdminClientRepository.TopicExistsAsync(resource.Topic.Name))
+                bool exists = await kafkaAdminClientRepository.TopicExistsAsync(resource.Topico.Nome);
+
+                if (!exists)
                 {
-                    await kafkaAdminClientRepository.AddTopicAsync(topic: resource.Topic.Name,
-                                                                   partitions: resource.Topic.Partitions,
-                                                                   replicationFactor: resource.Topic.Replicas);
+                    await kafkaAdminClientRepository.AddTopicAsync(resource.Topico);
                 }
 
-                await kafkaProducerRepository.AddMessage(resource.Topic.Name, message);
+                await kafkaProducerRepository.AddMessage(resource.Topico.Nome, message);
             }
         }
 
         public async Task UpdateAsync(MessageUpdateRequest request)
         {
-            // TODO: Obter essa configuração de uma base
-            var topic = "";
-
             var message = new Message<string, string>
             {
-                Key = request.Key,
+                Key = request.Id,
                 Value = request.Value
             };
 
-            await kafkaProducerRepository.AddMessage(topic, message);
+            IEnumerable<Resource> resources = await oracleMonitorRepository.List(request.Schema, request.Table, Operation.Update);
+
+            foreach (Resource resource in resources)
+            {
+                bool exists = await kafkaAdminClientRepository.TopicExistsAsync(resource.Topico.Nome);
+
+                if (!exists)
+                {
+                    await kafkaAdminClientRepository.AddTopicAsync(resource.Topico);
+                }
+
+                await kafkaProducerRepository.AddMessage(resource.Topico.Nome, message);
+            }
         }
 
-        public async Task DeleteAsync(string resource, string key)
+        public async Task DeleteAsync(string schema, string table, string id)
         {
-            // TODO: Obter essa configuração de uma base
-            var topic = "";
+            var message = new Message<string, string>
+            {
+                Key = id
+            };
 
-            var message = new Message<string, string> { Key = key };
+            IEnumerable<Resource> resources = await oracleMonitorRepository.List(schema, table, Operation.Delete);
 
-            await kafkaProducerRepository.AddMessage(topic, message);
+            foreach (Resource resource in resources)
+            {
+                bool exists = await kafkaAdminClientRepository.TopicExistsAsync(resource.Topico.Nome);
+
+                if (!exists)
+                {
+                    await kafkaAdminClientRepository.AddTopicAsync(resource.Topico);
+                }
+
+                await kafkaProducerRepository.AddMessage(resource.Topico.Nome, message);
+            }
         }
     }
 }

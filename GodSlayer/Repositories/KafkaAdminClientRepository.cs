@@ -1,10 +1,10 @@
 ﻿using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using GodSlayer.Models;
 using GodSlayer.Repositories.Interfaces;
 using GodSlayer.Utilities;
 using Microsoft.Extensions.Options;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -12,43 +12,53 @@ namespace GodSlayer.Repositories
 {
     public class KafkaAdminClientRepository : IKafkaAdminClientRepository
     {
-        private readonly IAdminClient adminClient;
+        private readonly IAdminClient client;
 
-        public KafkaAdminClientRepository(IOptions<Secrets> appSettings)
+        public KafkaAdminClientRepository(IOptions<Secrets> secrets)
         {
-            AdminClientConfig adminConfig = new AdminClientConfig
+            var client = new AdminClientConfig
             {
-                BootstrapServers = appSettings.Value.Kafka.SchemaRegistry.Host
+                BootstrapServers = secrets.Value.Kafka.Host,
+                SaslMechanism = SaslMechanism.Plain,
+                SecurityProtocol = SecurityProtocol.SaslSsl,
+                SaslUsername = secrets.Value.Kafka.SaslUsername,
+                SaslPassword = secrets.Value.Kafka.SaslPassword
             };
 
-            adminClient = new AdminClientBuilder(adminConfig).Build();
+            this.client = new AdminClientBuilder(client).Build();
         }
 
         public async Task<bool> TopicExistsAsync(string topic)
         {
-            var timeout = new TimeSpan(0, 0, 15);
+            var timeout = TimeSpan.FromSeconds(20);
 
-            bool exists = adminClient.GetMetadata(topic, timeout).Topics.Any(t => t.Topic == topic);
+            var metadata = client.GetMetadata(timeout);
+
+            bool exists = metadata.Topics.Any(y => y.Topic == topic);
 
             return await Task.FromResult(exists);
         }
 
-        public async Task AddTopicAsync(string topic, int partitions = -1, Dictionary<int, List<int>> replicas = null, short replicationFactor = -1)
+        public async Task AddTopicAsync(Topic topic)
         {
-            var topicSpecification = new TopicSpecification
+            try
             {
-                Name = topic,
-                NumPartitions = partitions,
-                ReplicasAssignments = replicas,
-                ReplicationFactor = replicationFactor
-            };
+                var topicsSpecification = new TopicSpecification[]
+                {
+                    new TopicSpecification
+                    {
+                        Name = topic.Nome,
+                        NumPartitions = topic.Particoes.GetValueOrDefault(6),
+                        ReplicationFactor = topic.Replicas.GetValueOrDefault(3)
+                    }
+                };
 
-            var topicsSpecification = new List<TopicSpecification>
+                await client.CreateTopicsAsync(topicsSpecification);
+            }
+            catch (CreateTopicsException exception)
             {
-                topicSpecification
-            };
-
-            await adminClient.CreateTopicsAsync(topicsSpecification);
+                throw exception;
+            }
         }
     }
 }

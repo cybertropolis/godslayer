@@ -8,23 +8,36 @@ namespace GodSlayer.Repositories
 {
     public class KafkaProducerRepository<TKey, TValue> : IKafkaProducerRepository<TKey, TValue>
     {
-        private readonly IProducer<TKey, TValue> producer;
+        private readonly IProducer<TKey, TValue> client;
 
-        public KafkaProducerRepository(IOptions<Secrets> settings)
+        public KafkaProducerRepository(IOptions<Secrets> secrets)
         {
-            var config = new ProducerConfig
+            var client = new ProducerConfig
             {
-                BootstrapServers = settings.Value.Kafka.SchemaRegistry.Host
+                BootstrapServers = secrets.Value.Kafka.Host,
+                SaslMechanism = SaslMechanism.Plain,
+                SecurityProtocol = SecurityProtocol.SaslSsl,
+                SaslUsername = secrets.Value.Kafka.SaslUsername,
+                SaslPassword = secrets.Value.Kafka.SaslPassword
             };
 
-            producer = new ProducerBuilder<TKey, TValue>(config).Build();
+            this.client = new ProducerBuilder<TKey, TValue>(client).Build();
         }
-        
+
         public async Task<DeliveryResult<TKey, TValue>> AddMessage(string topic, Message<TKey, TValue> message)
         {
-            DeliveryResult<TKey, TValue> result = await producer.ProduceAsync(topic, message);
+            try
+            {
+                DeliveryResult<TKey, TValue> result = await client.ProduceAsync(topic, message);
 
-            return result;
+                return result;
+            }
+            catch (ProduceException<TKey, TValue> exception)
+            {
+                // TODO: logar o erro para aplicar melhoria contínua
+
+                throw exception;
+            }
         }
     }
 }

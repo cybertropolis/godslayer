@@ -5,8 +5,8 @@ namespace GodSlayer.Services.Interfaces
 {
     public interface IChangeDataCaptureService
     {
-        Task UpdateAsync(MessageUpdateRequest request);
         Task CreateAsync(MessageCreateRequest request);
-        Task DeleteAsync(string resource, string key);
+        Task UpdateAsync(MessageUpdateRequest request);
+        Task DeleteAsync(string schema, string table, string id);
     }
 }

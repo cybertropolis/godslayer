@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Oracle.ManagedDataAccess.Client;
+using System;
 
 namespace GodSlayer
 {
@@ -41,28 +43,28 @@ namespace GodSlayer
 
             services.AddTransient<IKafkaProducerRepository<string, string>, KafkaProducerRepository<string, string>>();
             services.AddTransient<IKafkaAdminClientRepository, KafkaAdminClientRepository>();
-            services.AddTransient<IOracleMonitorRepository, OracleMonitorRepository>();
+            services.AddTransient<IResourceRepository, ResourceRepository>();
 
             services.AddTransient<IChangeDataCaptureService, ChangeDataCaptureService>();
         }
-        
+
         public void Configure(IApplicationBuilder app, IHostingEnvironment env)
         {
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
             }
-            else
-            {
-                app.UseHsts();
-            }
 
-            app.UseHttpsRedirection();
             app.UseMvc();
 
             app.Run(async (context) =>
             {
-                await context.Response.WriteAsync($"DB Connection: {Configuration.GetSection("Secrets:ConnectionString")}");
+                string connectionString = Configuration.GetSection("Secrets:ConnectionString").Value;
+
+                await context.Response.WriteAsync("Welcome to GodSlayer!\n\n");
+
+                await context.Response.WriteAsync($"Environment: {Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")}\n");
+                await context.Response.WriteAsync($"ConnectionString: {connectionString}");
             });
         }
     }
