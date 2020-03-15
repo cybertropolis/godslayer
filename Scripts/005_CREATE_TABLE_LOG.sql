@@ -1,22 +1,20 @@
-CREATE SEQUENCE REPLICACAO.SEQ_LOG
+CREATE SEQUENCE replication.seq_log
        MINVALUE 1
        MAXVALUE 999999999
           START WITH 1
       INCREMENT BY 1
         NOCACHE;
 
-GRANT SELECT ON REPLICACAO.SEQ_LOG TO SIS_REPLICACAO;
-
-CREATE TABLE REPLICACAO.LOG
+CREATE TABLE replication.log
 (
-    ID            NUMBER(9) DEFAULT REPLICACAO.SEQ_LOG.NEXTVAL NOT NULL,
-    TITULO        VARCHAR2(200) NOT NULL,
-    DESCRICAO     VARCHAR2(4000) NOT NULL,
-    IDFILA        NUMBER(9) NOT NULL,
-    ORIGEM        NUMBER(9) NOT NULL,
-    DATA_REGISTRO TIMESTAMP(6) WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL
+    id             NUMBER(9) DEFAULT replication.seq_log.NEXTVAL NOT NULL,
+    title          VARCHAR2(200) NOT NULL,
+    description    VARCHAR2(4000) NOT NULL,
+    queue_id       NUMBER(9) NOT NULL,
+    origin         NUMBER(9) NOT NULL,
+    registered_at  TIMESTAMP(6) WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL
 )
-TABLESPACE TBS_REPLICACAO
+TABLESPACE tbs_replication
    PCTFREE 10
   INITRANS 1
   MAXTRANS 255
@@ -28,27 +26,25 @@ TABLESPACE TBS_REPLICACAO
        MAXEXTENTS UNLIMITED
    );
 
-COMMENT ON TABLE REPLICACAO.LOG                IS 'Define um log.';
+COMMENT ON TABLE replication.log                IS 'Define a log.';
 
-COMMENT ON COLUMN REPLICACAO.LOG.ID            IS 'Identificação do log.';
-COMMENT ON COLUMN REPLICACAO.LOG.TITULO        IS 'Título do log com um resumo sobre o problema ocorrido.';
-COMMENT ON COLUMN REPLICACAO.LOG.DESCRICAO     IS 'Descrição da falha ocorrida a nível de sistema, pode ser uma stacktrace, exception, etc.';
-COMMENT ON COLUMN REPLICACAO.LOG.IDFILA        IS 'Identificação da fila derivada do erro ocorrido.';
-COMMENT ON COLUMN REPLICACAO.LOG.ORIGEM        IS 'Define a camada de origem da falha, (1) Trigger do Oracle, (2) Pacote CDC do Oracle ou (3) API de Integração.';
-COMMENT ON COLUMN REPLICACAO.LOG.DATA_REGISTRO IS 'Data de registro do log.';
+COMMENT ON COLUMN replication.log.id            IS 'Log identification.';
+COMMENT ON COLUMN replication.log.title         IS 'Log title with a summary of the problem that occurred.';
+COMMENT ON COLUMN replication.log.description   IS 'Description of the failure at the system level, can be a stacktrace, exception, etc.';
+COMMENT ON COLUMN replication.log.queue_id      IS 'Queue identification derived from the error occurred.';
+COMMENT ON COLUMN replication.log.origin        IS 'Defines the fault source layer, (1) Oracle Trigger, (2) Oracle CDC Package or (3) Integration API.';
+COMMENT ON COLUMN replication.log.registered_at IS 'Log record date.';
 
-ALTER TABLE REPLICACAO.LOG
-        ADD CONSTRAINT PK_LOG
-    PRIMARY KEY (ID)
-      USING INDEX TABLESPACE TBS_REPLICACAO;
+ALTER TABLE replication.log
+        ADD CONSTRAINT pk_log
+    PRIMARY KEY (id)
+      USING INDEX TABLESPACE tbs_replication;
 
-ALTER TABLE REPLICACAO.LOG
-        ADD CONSTRAINT FK_LOG_FILA
-    FOREIGN KEY (IDFILA)
- REFERENCES REPLICACAO.FILA (ID);
+ALTER TABLE replication.log
+        ADD CONSTRAINT fk_log_queue
+    FOREIGN KEY (queue_id)
+ REFERENCES replication.queue (id);
 
-ALTER TABLE REPLICACAO.LOG
-        ADD CONSTRAINT CK_LOG_ORIGEM
-      CHECK (ORIGEM IN (1, 2, 3));
-
-GRANT SELECT, INSERT, UPDATE, DELETE ON REPLICACAO.LOG TO SIS_REPLICACAO;
+ALTER TABLE replication.log
+        ADD CONSTRAINT ck_log_origin
+      CHECK (origin IN (1, 2, 3));
